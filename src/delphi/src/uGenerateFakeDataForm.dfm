@@ -36,9 +36,16 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
   object lblFormat: TLabel
     Left = 192
     Top = 96
-    Width = 44
+    Width = 34
     Height = 13
-    Caption = 'lblFormat'
+    Caption = 'Format'
+  end
+  object lblType: TLabel
+    Left = 440
+    Top = 96
+    Width = 22
+    Height = 13
+    Caption = 'type'
   end
   object btnExecute: TButton
     Left = 8
@@ -69,7 +76,7 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
     OnClick = btnFileSelectClick
   end
   object cbFormat: TComboBox
-    Left = 264
+    Left = 248
     Top = 93
     Width = 145
     Height = 21
@@ -88,5 +95,18 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 4
     OnKeyPress = edtrowsKeyPress
+  end
+  object cbType: TComboBox
+    Left = 492
+    Top = 93
+    Width = 145
+    Height = 21
+    ItemIndex = 0
+    TabOrder = 5
+    Text = 'line'
+    OnKeyPress = cbTypeKeyPress
+    Items.Strings = (
+      'line'
+      'json array')
   end
 end

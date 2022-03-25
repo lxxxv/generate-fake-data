@@ -1,4 +1,4 @@
-unit uGenerateFakeDataForm;
+﻿unit uGenerateFakeDataForm;
 
 interface
 
@@ -6,9 +6,16 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls;
 
+
+const
+  RESULT_FILENAME : string = 'result.datasets';
+
 type
   Texceptcheckmode = (eckselctfile, ectexecute);
   Texceptcheckmodes = set of Texceptcheckmode;
+  Tfileformat = (ffjson);
+  TfileType   = (ftline, ftarray);
+
 
   TGenerateFakeDataForm = class(TForm)
     btnExecute: TButton;
@@ -19,12 +26,15 @@ type
     btnFileSelect: TButton;
     cbFormat: TComboBox;
     edtrows: TEdit;
+    lblType: TLabel;
+    cbType: TComboBox;
     procedure btnExecuteClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnFileSelectClick(Sender: TObject);
     procedure cbFormatKeyPress(Sender: TObject; var Key: Char);
     procedure edtrowsKeyPress(Sender: TObject; var Key: Char);
+    procedure cbTypeKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     Ffileselectlist : TStringList;
@@ -64,6 +74,11 @@ end;
 
 procedure TGenerateFakeDataForm.cbFormatKeyPress(Sender: TObject;
   var Key: Char);
+begin
+  Key := #0;
+end;
+
+procedure TGenerateFakeDataForm.cbTypeKeyPress(Sender: TObject; var Key: Char);
 begin
   Key := #0;
 end;
@@ -152,16 +167,72 @@ end;
 
 function TGenerateFakeDataForm.execute: boolean;
 begin
+  //
+  // 변환 시작.
+  //
   TThread.CreateAnonymousThread
   (
     procedure
     var
       idx : longint;
+      pschemas : tstringlist;
+      psavefilelist : tstringlist;
+
+      fileformat : Tfileformat;
+      fileType   : TfileType;
+
+      makejson : tproc;
     begin
-      idx := 0;
-      while idx < self.Ffileselectlist.Count do
+      makejson := procedure ()
+      var
+        idxsub : longint;
       begin
-        inc(idx);
+        case fileType of
+          ftline: ;
+          ftarray: psavefilelist.Add('[');
+        end;
+
+        idxsub := 0;
+        while idx < self.Ffileselectlist.Count do
+        begin
+          inc(idxsub);
+        end;
+
+        case fileType of
+          ftline: ;
+          ftarray: psavefilelist.Add(']');
+        end;
+      end;
+
+
+      //
+      // json 키에 사용할 값을 가지고 온다.
+      // 파일명을 스키마로 한다.
+      //
+      pschemas := tstringlist.create;
+      psavefilelist := tstringlist.create;
+      try
+        idx := 0;
+        while idx < self.Ffileselectlist.Count do
+        begin
+          pschemas.Add(StringReplace(ExtractFileName(self.Ffileselectlist.Strings[idx]), '.dataset', '', [rfReplaceAll]));
+          inc(idx);
+        end;
+
+        //
+        //
+        //
+        fileformat := Tfileformat(self.cbFormat.ItemIndex);
+        fileType   := TfileType(self.cbType.ItemIndex);
+
+        case fileformat of
+          ffjson: makejson;
+        end;
+
+        psavefilelist.SaveToFile(self.edtresultfolderpath.Text + RESULT_FILENAME, TEncoding.UTF8);
+      finally
+        psavefilelist.free;
+        pschemas.free;
       end;
     end
   ).Start;
