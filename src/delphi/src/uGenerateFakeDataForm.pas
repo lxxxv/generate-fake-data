@@ -170,6 +170,7 @@ begin
   //
   // 변환 시작.
   //
+
   TThread.CreateAnonymousThread
   (
     procedure
