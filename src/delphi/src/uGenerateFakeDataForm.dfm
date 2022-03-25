@@ -2,7 +2,7 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
   Left = 0
   Top = 0
   Caption = #49892#54665
-  ClientHeight = 503
+  ClientHeight = 308
   ClientWidth = 645
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,12 +16,12 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
   OnDestroy = FormDestroy
   DesignSize = (
     645
-    503)
+    308)
   PixelsPerInch = 96
   TextHeight = 13
   object lblResultFolderPath: TLabel
     Left = 8
-    Top = 395
+    Top = 139
     Width = 72
     Height = 13
     Caption = #44208#44284' '#54260#45908' '#44221#47196
@@ -49,7 +49,7 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
   end
   object btnExecute: TButton
     Left = 8
-    Top = 432
+    Top = 176
     Width = 629
     Height = 57
     Anchors = [akLeft, akTop, akRight]
@@ -59,7 +59,7 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
   end
   object edtresultfolderpath: TEdit
     Left = 100
-    Top = 392
+    Top = 136
     Width = 537
     Height = 21
     Anchors = [akLeft, akTop, akRight]
@@ -108,5 +108,12 @@ object GenerateFakeDataForm: TGenerateFakeDataForm
     Items.Strings = (
       'line'
       'json array')
+  end
+  object progress: TProgressBar
+    Left = 8
+    Top = 256
+    Width = 629
+    Height = 33
+    TabOrder = 6
   end
 end
