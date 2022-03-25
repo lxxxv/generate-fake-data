@@ -31,3 +31,8 @@ HELP.md
 
 ### VS Code ###
 .vscode/
+
+### delphi ###
+*.local
+*.res
+*.dcu
