@@ -39,7 +39,7 @@ begin
   //
 
   ppropertiesinfo                := Tpropertiesinfo.create;
-  ppropertiesinfo.savefolderpath := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
+  ppropertiesinfo.savefolderpath := 'D:\project\__lxxxv__\generate-fake-data\';
   ppropertiesinfo.fileformat     := ffjson;
   ppropertiesinfo.fileType       := ftline;
   ppropertiesinfo.rows           := 100;
@@ -55,9 +55,9 @@ var
 begin
   inherited;
 
-  uOperator.TOperator.get_overlap_random(30);
-  uOperator.TOperator.get_overlap_random_group(2, 30);
-  randomvalue := uOperator.get_overlap_random(200, 10);
+  randomvalue := uOperator.TOperator.get_overlap_random(30);
+  randomvalue := uOperator.TOperator.get_overlap_random_group(10, 4);
+  randomvalue := uOperator.TOperator.get_overlap_random_group(4, 10);
 
   uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\bitcoinaddress.dataset', self.fileInfolist);
   uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\domainname.dataset', self.fileInfolist);
@@ -69,13 +69,13 @@ begin
   uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\mimetype.dataset', self.fileInfolist);
   uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\phonenumber.dataset', self.fileInfolist);
   uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\streetaddress.dataset', self.fileInfolist);
-  uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\timezone.dataset', self.fileInfolist);
-
-  
+  uOperator.TOperator.push_fileinfo('D:\project\__lxxxv__\generate-fake-data\resource\timezone.dataset', self.fileInfolist); 
 
   str_ret := uOperator.TOperator.get_jsonschemas(self.fileInfolist);
 
   self.execute;
+
+//  Application.Terminate;
 end;
 
 procedure TTestForm.FormDestroy(Sender: TObject);
@@ -119,12 +119,8 @@ begin
     pfileInfo : TfileInfo;
     pdatasetfile : tstringlist;
 
-    maxrow   : longint;
-    datasetrow : longint;
-
     randomvalue : tlongintdynamicarray;
   begin
-    maxrow      := ppropertiesinfo.rows;
     schemas     := uOperator.TOperator.get_jsonschemas(self.fileInfolist);
 
     psavefile   := tstringlist.Create;
@@ -134,7 +130,7 @@ begin
         // json 구조화 먼저 생성
         //
         idx := 0;
-        while idx < maxrow do
+        while idx < ppropertiesinfo.rows do
         begin
           case ppropertiesinfo.fileType of
             ftline  : pushdata := '{"row":' + inttostr(idx+1) + schemas;
@@ -159,14 +155,13 @@ begin
         while idx < self.fileInfolist.Count do
         begin
           pfileInfo   := self.fileInfolist[idx];
-          datasetrow  := pfileinfo.rows;
 
-          randomvalue := uOperator.get_overlap_random(maxrow, datasetrow);
+          randomvalue := uOperator.TOperator.get_overlap_random_group(pfileinfo.rows, ppropertiesinfo.rows);
 
           pdatasetfile := tstringlist.Create;
           pdatasetfile.LoadFromFile(pfileInfo.filenamepath, TEncoding.UTF8);
           idxran := 0;
-          while idxran < maxrow do
+          while idxran < ppropertiesinfo.rows do
           begin
             psavefile.Strings[idxran] := StringReplace
             (
@@ -193,13 +188,13 @@ begin
 
       end;
     finally
+      psavefile.SaveToFile(ppropertiesinfo.savefolderpath + RESULT_FILENAME, TEncoding.UTF8);
+      psavefile.free;
+      
       if assigned(_parentdata) then
       begin
         _parentdata.free;
       end;
-
-      psavefile.SaveToFile(ppropertiesinfo.savefolderpath + RESULT_FILENAME, TEncoding.UTF8);
-      psavefile.free;
     end;
   end;
 
@@ -213,7 +208,13 @@ end;
 
 procedure TTestForm.onthreadend(_thread: Tanonymousthread);
 begin
-
+  _thread.synchronize
+  (
+    procedure()
+    begin
+      MessageBox(self.handle, '완료', pchar(self.Caption), MB_OK);
+    end
+  );
 end;
 
 end.

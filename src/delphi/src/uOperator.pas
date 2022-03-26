@@ -23,6 +23,7 @@ type
     class function get_overlap_random(const _range: longint): Tlongintdynamicarray; overload;
     //
     // 그룹별 중복 제거된 난수 생성 함수
+    // _group : 10, _range : 300 이라 가정할때 전체 300 길이만큼 배열을 가지고 10개씩 그룹지어서 난수를 생성하라.
     //
     class function get_overlap_random_group(const _group: longint; const _range: longint): Tlongintdynamicarray;
     //
@@ -42,12 +43,6 @@ type
     //
     class function get_max_rows(_targetList: TfileInfoObjectList): longint;
   end;
-
-
-
-
-
-  function get_overlap_random(const _createrows: longint; const _datasetrows: longint): Tlongintdynamicarray; overload;
 
 implementation
 
@@ -163,9 +158,8 @@ begin
 
   maxrange  := ranrange;
   randomidx := 0;
-
   idx := 0;
-  while idx < ranrange do
+  while idx < targetrange do
   begin
     randomidx := Random(maxrange);
 
@@ -175,13 +169,20 @@ begin
 
     _ranbuffer[randomidx] := _ranbuffer[maxrange];
 
+    if maxrange = 0 then
+    begin
+      break;
+    end;
+
     inc(idx);
   end;
 
   {$IFDEF TEST}
   pdic := uoverridedic.Tlongint_easydic.create(True);
+  maxrange  := ranrange;
+  randomidx := 0;
   idx := 0;
-  while idx < ranrange do
+  while idx < targetrange do
   begin
     if pdic.TryGetValue(_target[idx+_startoffset], pobject) then
     begin
@@ -190,6 +191,14 @@ begin
     begin
       pdic.add(_target[idx+_startoffset], pobject);
     end;
+
+    dec(maxrange);
+
+    if maxrange = 0 then
+    begin
+      break;
+    end;
+
     inc(idx);
   end;
   pdic.free;
@@ -198,25 +207,22 @@ end;
 
 class function TOperator.get_overlap_random_group(const _group: longint; const _range: longint): Tlongintdynamicarray;
 var
-  range : longint;
   ret : longint;
   ranbuffer : Tlongintdynamicarray;
 
   idx : longint;
 begin
-  range := _group * _range;
+  setlength(result, _range);
+  ZeroMemory(@result[0], _range * sizeof(result[0]));
 
-  setlength(result, range);
-  ZeroMemory(@result[0], range * sizeof(result[0]));
-
-  setlength(ranbuffer, _range);
-  ZeroMemory(@ranbuffer[0], _range * sizeof(ranbuffer[0]));
+  setlength(ranbuffer, _group);
+  ZeroMemory(@ranbuffer[0], _group * sizeof(ranbuffer[0]));
 
   idx := 0;
-  while idx < _group do
+  while idx < _range do
   begin
-    ret := get_overlap_random(_range * idx, ranbuffer, result);
-    inc(idx);
+    ret := get_overlap_random(idx, ranbuffer, result);
+    idx := idx + _group;
   end;
 end;
 
