@@ -4,7 +4,7 @@
         <ProjectVersion>19.2</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Test</Config>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
@@ -122,6 +122,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -164,6 +166,16 @@
         </DCCReference>
         <DCCReference Include="src\uhandler_thread.pas"/>
         <DCCReference Include="src\uoverridedic.pas"/>
+        <DCCReference Include="src\uParentForm.pas">
+            <Form>ParentForm</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="src\uOperator.pas"/>
+        <DCCReference Include="src\uTestForm.pas">
+            <Form>TestForm</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="src\uTypeRepository.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -202,6 +214,24 @@
                 </DeployFile>
                 <DeployFile LocalName="Win32\Test\GenerateFakeData.exe" Configuration="Test" Class="ProjectOutput">
                     <Platform Name="Win32">
+                        <RemoteName>GenerateFakeData.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Win64\Test\GenerateFakeData.exe" Configuration="Test" Class="ProjectOutput">
+                    <Platform Name="Win64">
+                        <RemoteName>GenerateFakeData.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Win64\Debug\GenerateFakeData.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win64">
+                        <RemoteName>GenerateFakeData.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Win64\Release\GenerateFakeData.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win64">
                         <RemoteName>GenerateFakeData.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>

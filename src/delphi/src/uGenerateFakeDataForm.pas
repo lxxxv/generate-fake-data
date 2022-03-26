@@ -7,29 +7,10 @@ uses
   System.SysUtils, System.Variants, System.Classes, System.Generics.Collections,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls,
 
-  uhandler_thread;
-
-
-const
-  RESULT_FILENAME : string = 'result.datasets';
+  uhandler_thread, uParentForm, uOperator, uTypeRepository;
 
 type
-  Texceptcheckmode = (eckselctfile, ectexecute);
-  Texceptcheckmodes = set of Texceptcheckmode;
-  Tfileformat = (ffjson);
-  TfileType   = (ftline, ftarray);
-
-  Tlongintdynamicarray = array of longint;
-
-  TfileInfo = class
-  public
-    Ffilenamepath : string;
-    Fschema       : string;
-    Frows         : longint
-  end;
-
-
-  TGenerateFakeDataForm = class(TForm)
+  TGenerateFakeDataForm = class(TParentForm)
     btnExecute: TButton;
     edtresultfolderpath: TEdit;
     lblResultFolderPath: TLabel;
@@ -50,22 +31,15 @@ type
     procedure cbTypeKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
-    Fposition       : longint;
     Fprogresstimer  : ttimer;
-    Fmaxrow         : longint;
-    FfileInfolist   : TObjectList<TfileInfo>;
+
     procedure ontimer(Sender: TObject);
 
-    procedure Test;
     function execept_check(_exceptcheckmodes : Texceptcheckmodes): boolean;
-    function select_files: boolean;
+
+    function do_select_files: boolean;
+
     function execute: boolean;
-    function check_max_rows: boolean;
-    function getrandomvalue(const _createrows: longint; const _datasetrows: longint): Tlongintdynamicarray;
-
-    function getjsonschemas(_fileInfolist: TObjectList<TfileInfo>): string;
-    function getreplacestring(const _idx: longint): string;
-
 
     procedure onthread(_thread: Tanonymousthread; _parentdata : TObject);
     procedure onthreadend(_thread: Tanonymousthread);
@@ -92,8 +66,10 @@ procedure TGenerateFakeDataForm.btnFileSelectClick(Sender: TObject);
 begin
   if self.execept_check([eckselctfile]) then
   begin
-    self.select_files;
-    self.check_max_rows;
+    self.do_select_files;
+
+    self.maxrow := uOperator.TOperator.get_max_rows(self.fileInfolist);
+    self.edtrows.Text := inttostr(self.maxrow);
   end;
 end;
 
@@ -108,22 +84,6 @@ begin
   Key := #0;
 end;
 
-function TGenerateFakeDataForm.check_max_rows: boolean;
-var
-  idx : longint;
-begin
-  idx := 0;
-  while idx < self.FfileInfolist.Count do
-  begin
-    if strtoint(self.edtrows.Text) <= self.FfileInfolist[idx].Frows then
-    begin
-      self.edtrows.Text := inttostr(self.FfileInfolist[idx].Frows);
-      self.Fmaxrow      := self.FfileInfolist[idx].Frows;
-    end;
-    inc(idx);
-  end;
-end;
-
 procedure TGenerateFakeDataForm.edtrowsKeyPress(Sender: TObject; var Key: Char);
 begin
   if (Key in ['0'..'9', #3, #8, #10, #13, #22]) then
@@ -136,7 +96,7 @@ begin
       end;
     end else
     begin
-      if (strtointdef(self.edtrows.Text + Key, self.Fmaxrow) < self.Fmaxrow) then
+      if (strtointdef(self.edtrows.Text + Key, self.maxrow) < self.maxrow) then
       begin
 
       end else
@@ -175,7 +135,7 @@ begin
   begin
     result := false;
 
-    if self.FfileInfolist.Count = 0 then
+    if self.fileInfolist.Count = 0 then
     begin
       Messagebox(self.Handle, '조합할 데이터의 원본 dataset을 선택하여 주십시오.', pchar(self.Caption), MB_OK);
       exit;
@@ -189,107 +149,77 @@ end;
 function TGenerateFakeDataForm.execute: boolean;
 var
   panonymousthread : uhandler_thread.Tanonymousthread;
+  ppropertiesinfo : Tpropertiesinfo;
 begin
   //
   // 변환 시작.
   //
 
-  self.Fposition    := 0;
-  self.progress.Min := 0;
-  self.progress.Max := StrToInt(self.edtrows.Text) * self.FfileInfolist.Count;
+  self.progressposition := 0;
+  self.progress.Min     := 0;
+  self.progress.Max     := StrToInt(self.edtrows.Text) * self.fileInfolist.Count;
 
-  panonymousthread := uhandler_thread.Tanonymousthread.create(nil, self.onthread, self.onthreadend);
+  ppropertiesinfo                := Tpropertiesinfo.create;
+  ppropertiesinfo.savefolderpath := IncludeTrailingPathDelimiter(self.edtresultfolderpath.Text);
+  ppropertiesinfo.fileformat     := Tfileformat(self.cbFormat.ItemIndex);
+  ppropertiesinfo.fileType       := TfileType(self.cbType.ItemIndex);
+  ppropertiesinfo.rows           := StrToInt(self.edtrows.Text);
+
+  panonymousthread := uhandler_thread.Tanonymousthread.create(ppropertiesinfo, self.onthread, self.onthreadend);
   panonymousthread.start;
 end;
 
 procedure TGenerateFakeDataForm.FormCreate(Sender: TObject);
 begin
-  self.edtresultfolderpath.Text := extractfilepath(paramstr(0));
-  self.Fmaxrow                  := 0;
-  self.Fposition                := 0;
-  self.edtrows.Text             := inttostr(self.Fmaxrow);
-  self.FfileInfolist            := TObjectList<TfileInfo>.create;
-  self.Fprogresstimer           := ttimer.Create(nil);
+  inherited;
 
+  self.Fprogresstimer           := ttimer.Create(nil);
   self.Fprogresstimer.Enabled   := false;
   self.Fprogresstimer.OnTimer   := ontimer;
   self.Fprogresstimer.Interval  := 200;
 
-  {$IFDEF TEST}
-  self.Test;
-  self.execute;
-  {$ENDIF}
+  self.edtresultfolderpath.Text := extractfilepath(paramstr(0));
+  self.edtrows.Text             := inttostr(self.maxrow);
 end;
 
 procedure TGenerateFakeDataForm.FormDestroy(Sender: TObject);
 begin
   self.Fprogresstimer.free;
-  self.FfileInfolist.Free;
-end;
 
-function TGenerateFakeDataForm.getrandomvalue(const _createrows, _datasetrows: longint): Tlongintdynamicarray;
-var
-  ranbuffer : Tlongintdynamicarray;
-
-  idx : longint;
-  idxbuffer : longint;
-  randomidx : longint;
-  maxcounter : longint;
-begin
-  //
-  // 사용자가 요청한 생성 row 갯수가 dataset 파일들의 row보다 더 클 수 있다.
-  // 이 경우 row 갯수 그대로 난수를 만들게 되면 out of bount가 날수 있기 때문에
-  // dataset 파일의 최대 길이만큼 난수를 세트로 생성한다.
-  //
-
-  setlength(result, _createrows);
-  ZeroMemory(@result[0], Length(result) * sizeof(result[0]));
-
-  setlength(ranbuffer, _datasetrows);
-  ZeroMemory(@ranbuffer[0], Length(ranbuffer) * sizeof(result[0]));
-
-  idx := 0;
-  randomidx  := 0;
-  maxcounter := 0;
-  while idx < _createrows do
-  begin
-    if maxcounter = 0 then
-    begin
-      idxbuffer := 0;
-      while idxbuffer < _datasetrows do
-      begin
-        ranbuffer[idxbuffer] := idxbuffer;
-        inc(idxbuffer);
-      end;
-      maxcounter := _datasetrows;
-    end;
-
-    randomidx := Random(maxcounter);
-
-    result[idx] := ranbuffer[randomidx];
-
-    dec(maxcounter);
-
-    ranbuffer[randomidx] := ranbuffer[maxcounter];
-
-    inc(idx);
-  end;
-end;
-
-function TGenerateFakeDataForm.getreplacestring(const _idx: longint): string;
-begin
-  result := IntToStr((_idx+1) * 111) + '+_+_';
+  inherited;
 end;
 
 procedure TGenerateFakeDataForm.onthread(_thread: Tanonymousthread; _parentdata: TObject);
 var
+  ppropertiesinfo : Tpropertiesinfo;
+
   fileformat : Tfileformat;
   fileType   : TfileType;
 
-  savefilepath : string;
+  savefolderpath : string;
 
   makeJsonFile : tproc;
 begin
+  if assigned(_parentdata) then
+  begin
+
+  end else
+  begin
+    exit;
+  end;
+
+  if _parentdata is Tpropertiesinfo then
+  begin
+
+  end else
+  begin
+    exit;
+  end;
+
+  ppropertiesinfo := Tpropertiesinfo(_parentdata);
+
+
+
   _thread.synchronize
   (
     procedure()
@@ -314,14 +244,10 @@ begin
 
     randomvalue : tlongintdynamicarray;
   begin
-    maxrow      := StrToInt(self.edtrows.Text);
+    maxrow      := ppropertiesinfo.rows;
+    schemas     := uOperator.TOperator.get_jsonschemas(self.fileInfolist);
 
-//    {$IFDEF TEST}
-//    maxrow := 10;
-//    {$ENDIF}
-
-    schemas := self.getjsonschemas(self.FfileInfolist);
-    psavefile := tstringlist.Create;
+    psavefile   := tstringlist.Create;
     try
       try
         //
@@ -330,7 +256,7 @@ begin
         idx := 0;
         while idx < maxrow do
         begin
-          case fileType of
+          case ppropertiesinfo.fileType of
             ftline  : pushdata := '{"row":' + inttostr(idx+1) + schemas;
             ftarray :
             begin
@@ -350,31 +276,27 @@ begin
         end;
 
         idx := 0;
-        while idx < self.FfileInfolist.Count do
+        while idx < self.fileInfolist.Count do
         begin
-          pfileInfo   := self.FfileInfolist[idx];
-          datasetrow  := pfileinfo.Frows;
+          pfileInfo   := self.fileInfolist[idx];
+          datasetrow  := pfileinfo.rows;
 
-//          {$IFDEF TEST}
-//          datasetrow := 15;
-//          {$ENDIF}
-
-          randomvalue := self.getrandomvalue(maxrow, datasetrow);
+          randomvalue := uOperator.get_overlap_random(maxrow, datasetrow);
 
           pdatasetfile := tstringlist.Create;
-          pdatasetfile.LoadFromFile(pfileInfo.Ffilenamepath, TEncoding.UTF8);
+          pdatasetfile.LoadFromFile(pfileInfo.filenamepath, TEncoding.UTF8);
           idxran := 0;
           while idxran < maxrow do
           begin
             psavefile.Strings[idxran] := StringReplace
             (
               psavefile.Strings[idxran]
-              , self.getreplacestring(idx)
+              , uOperator.TOperator.get_row_replace_string(idx)
               , pdatasetfile.Strings[randomvalue[idxran]]
               , [rfreplaceall]
             );
 
-            inc(self.Fposition);
+            progressposition := progressposition + 1;
 
             inc(idxran);
           end;
@@ -383,7 +305,7 @@ begin
           inc(idx);
         end;
 
-        case fileType of
+        case ppropertiesinfo.fileType of
           ftline  : ;
           ftarray : psavefile.Add(']}');
         end;
@@ -391,7 +313,12 @@ begin
 
       end;
     finally
-      psavefile.SaveToFile(savefilepath + RESULT_FILENAME, TEncoding.UTF8);
+      if assigned(_parentdata) then
+      begin
+        _parentdata.free;
+      end;
+
+      psavefile.SaveToFile(ppropertiesinfo.savefolderpath + RESULT_FILENAME, TEncoding.UTF8);
       psavefile.free;
     end;
   end;
@@ -399,10 +326,7 @@ begin
   //
   // 파일 생성 시작.
   //
-  savefilepath := IncludeTrailingPathDelimiter(self.edtresultfolderpath.Text);
-  fileformat   := Tfileformat(self.cbFormat.ItemIndex);
-  fileType     := TfileType(self.cbType.ItemIndex);
-  case fileformat of
+  case ppropertiesinfo.fileformat of
     ffjson: makeJsonFile;
   end;
 end;
@@ -413,9 +337,10 @@ begin
   (
     procedure()
     begin
+      self.Fprogresstimer.Enabled := false;
+
       self.progress.Position := self.progress.Max;
 
-      self.Fprogresstimer.Enabled := false;
       MessageBox(self.handle, '완료', pchar(self.Caption), MB_OK);
     end
   );
@@ -425,46 +350,16 @@ procedure TGenerateFakeDataForm.ontimer(Sender: TObject);
 begin
   self.Fprogresstimer.Enabled := false;
 
-  self.progress.Position := self.Fposition;
+  self.progress.Position := self.progressposition;
 
   self.Fprogresstimer.Enabled := true;
 end;
 
-function TGenerateFakeDataForm.getjsonschemas(_fileInfolist: TObjectList<TfileInfo>): string;
-var
-  idx : longint;
-
-  temp : string;
-begin
-  temp := '';
-
-  idx := 0;
-  while idx < _fileInfolist.Count do
-  begin
-    if idx = 0 then
-    begin
-      temp := format('"%s":"%s"', [_fileInfolist[idx].Fschema, self.getreplacestring(idx)]);
-    end else
-    begin
-      temp := temp + ',' + format('"%s":"%s"', [_fileInfolist[idx].Fschema, self.getreplacestring(idx)]);
-    end;
-
-    inc(idx);
-  end;
-
-  //
-  // 앞에 row 번호 적용해주기 위해
-  //
-  result := temp + '}';
-end;
-
-function TGenerateFakeDataForm.select_files: boolean;
+function TGenerateFakeDataForm.do_select_files: boolean;
 var
   pFileOpenDialog : TFileOpenDialog;
   pFileTypeItem : TFileTypeItem;
   idx : longint;
-  pfileInfo : TfileInfo;
-  pstringlist : tstringlist;
 begin
   result := false;
 
@@ -480,22 +375,12 @@ begin
 
       if pFileOpenDialog.Execute then
       begin
-        self.FfileInfolist.Clear;
+        self.fileInfolist.Clear;
 
         idx := 0;
         while idx < pFileOpenDialog.Files.Count do
         begin
-          pfileInfo := TfileInfo.Create;
-          self.FfileInfolist.Add(pfileInfo);
-
-          pfileInfo.Ffilenamepath := pFIleOpenDialog.Files.Strings[idx];
-          pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-          pstringlist := tstringlist.Create;
-          pstringlist.LoadFromFile(pfileInfo.Ffilenamepath, Tencoding.UTF8);
-          pfileInfo.Frows := pstringlist.Count;
-          pstringlist.free;
-
+          uOperator.TOperator.push_fileinfo(pFIleOpenDialog.Files.Strings[idx], self.fileInfolist);
           inc(idx);
         end;
 
@@ -507,82 +392,6 @@ begin
   finally
     pFileOpenDialog.free;
   end;
-end;
-
-procedure TGenerateFakeDataForm.Test;
-var
-  pfileInfo : TfileInfo;
-begin
-  {$IFDEF TEST}
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\bitcoinaddress.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 500;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\domainname.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\emailaddress.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\filename.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\fullname.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\guid.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\ipv4.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 26;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\mimetype.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\phonenumber.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 1000000;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\streetaddress.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  pfileInfo := TfileInfo.Create;
-  self.FfileInfolist.Add(pfileInfo);
-  pfileInfo.Frows         := 333;
-  pfileInfo.Ffilenamepath := 'D:\project\__lxxxv__\generate-fake-data\resource\timezone.dataset';
-  pfileInfo.Fschema       := StringReplace(ExtractFileName(pfileInfo.Ffilenamepath), '.dataset', '', [rfReplaceAll]);
-
-  self.check_max_rows;
-  self.edtrows.Text       := '100000';
-  {$ENDIF}
 end;
 
 end.
