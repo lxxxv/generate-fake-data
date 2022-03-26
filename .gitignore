@@ -40,3 +40,6 @@ HELP.md
 *.rsm
 *.identcache
 __history
+
+### dataset ###
+*.datasets
