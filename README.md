@@ -6,6 +6,7 @@ row 값을 사용자로부터 받아서 중복 처리가 된 dataset을 읽어 r
 <br/>
 delphi, java, python 언어로 우선 지원 예정 입니다.
 <br/>
+<br/>
 빌드 환경
 <br/>
 delphi : 10.4
