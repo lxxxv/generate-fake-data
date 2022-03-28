@@ -37,4 +37,5 @@ HELP.md
 
 ### delphi ###
 *.dcu
+*.exe
 src/delphi/src/__history
