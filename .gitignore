@@ -1,0 +1,40 @@
+HELP.md
+.gradle
+/build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.class
+*.iws
+*.iml
+*.ipr
+*.log
+/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### sample data ###
+*.datasets
+
+### delphi ###
+*.dcu
+src/delphi/src/__history

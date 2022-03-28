@@ -251,15 +251,15 @@ begin
         while idx < ppropertiesinfo.rows do
         begin
           case ppropertiesinfo.fileType of
-            ftline  : pushdata := '{"row":' + inttostr(idx+1) + schemas;
+            ftline  : pushdata := '{"row":"' + inttostr(idx+1) + '",' + schemas;
             ftarray :
             begin
               if idx = 0 then
               begin
-                pushdata := '{"data":[' + '{"row":' + inttostr(idx+1) + schemas;
+                pushdata := '{"data":[' + '{"row":"' + inttostr(idx+1) + '",' + schemas;
               end else
               begin
-                pushdata := ',' + '{"row":' + inttostr(idx+1) + schemas;
+                pushdata := ',' + '{"row":"' + inttostr(idx+1) + '",' + schemas;
               end;
             end;
           end;
